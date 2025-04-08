@@ -1,0 +1,11 @@
+# Virtual environment
+.venv/
+
+# PyCharm
+.idea/
+
+# dotenv
+.env
+
+# log
+*.log
