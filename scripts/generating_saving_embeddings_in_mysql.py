@@ -4,7 +4,8 @@ import json
 from decouple import config
 
 # Loading model
-model = SentenceTransformer("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+model = SentenceTransformer("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2", device='cpu')
+
 
 DB_CONFIG = {
     "host": config('db_host'),
