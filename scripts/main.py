@@ -28,29 +28,52 @@ model = SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniL
 class QuestionRequest(BaseModel):
     question: str
 
+def get_relevant_answers() -> str:
+    try:
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT response_text FROM predefined_responses 
+            WHERE language = 'eng' 
+            AND command NOT IN ('default', 'main', 'contacts')
+        """)
+        example_answers = [row[0] for row in cursor.fetchall()]
+        return "\n\n".join(example_answers)
+    except Exception as e:
+        print(f"Error fetching predefined answers: {e}")
+        return ""
+    finally:
+        cursor.close()
+        conn.close()
+
 # Generation text by GPT
 def call_gpt(prompt: str) -> str:
+    examples_text = get_relevant_answers()
+    if not examples_text:
+        examples_text = "(no predefined answers were available)"
+
     system_prompt = (
         "You are an assistant specializing in questions strictly related to crossing the border of the Republic of Moldova. "
-        "You must only answer questions directly related to this topic, such as required documents, border crossing rules, categories of travelers, control procedures, or emergency situations. "
-        "Do not answer any questions that are outside the scope of border crossing, "
+        "You must only answer questions directly related to this topic, such as required documents, border crossing rules, categories of travelers and documents, control procedures, or emergency situations. "
+        "Do not answer any questions that are outside the scope of border crossing.\n\n"
+        "Here are some predefined answers to frequently asked questions. Use them as reference:\n\n"
+        f"{examples_text}\n\n"
+        "If the user's question matches any of these, adapt the answer accordingly. Otherwise, answer strictly based on border crossing regulations.\n\n"
         "If a question is unrelated or unclear, politely refuse to answer and inform the user that they can contact the Border Police of the Republic of Moldova for clarification "
-        "via phone at +37322259717 or by email at linia.verde@border.gov.md. "
-        "In case of doubt, always prioritize not answering over providing potentially incorrect or off-topic information. "
-        "Keep all responses short, clear, professional and under 100 words"
-        "Do not mention that you are an AI language model."
+        "via phone at +37322259717 or by email at linia.verde@border.gov.md.\n\n"
+        "In case of doubt, always prioritize not answering over providing potentially incorrect or off-topic information.\n\n"
+        "Keep all responses clear, professional, and under 200 words. Do not mention that you are an AI language model."
     )
 
-    #response = openai.ChatCompletion.create(
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": prompt}
         ],
-        temperature=0.5,  # reduce creativity so as not to go off-topic
+        temperature=0.7,  # reduce creativity so as not to go off-topic
         top_p=0.5,
-        max_tokens = 150 # about 100-110 words
+        max_tokens = 250 # about 180-200 words
     )
     return response.choices[0].message.content.strip()
 
@@ -102,7 +125,7 @@ def process_question(req: QuestionRequest):
         # 5. Sorting and picking top result
         similarities.sort(reverse=True, key=lambda x: x[0])
 
-        if similarities and similarities[0][0] >= 0.7:
+        if similarities and similarities[0][0] >= 0.9:
             best_match = similarities[0][1]
             return {"answer": best_match['answer']}
 
