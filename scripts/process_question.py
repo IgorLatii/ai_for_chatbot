@@ -35,7 +35,6 @@ def call_gpt(prompt: str) -> str:
         "Do not mention that you are an AI language model."
     )
 
-    #response = openai.ChatCompletion.create(
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
