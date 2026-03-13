@@ -23,7 +23,7 @@ DB_CONFIG = {
 client = OpenAI(api_key=config('openai_api_key'))
 
 # Encoder Model (for embeddings) initialization
-model = SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')
+model = SentenceTransformer("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
 
 class QuestionRequest(BaseModel):
     question: str
